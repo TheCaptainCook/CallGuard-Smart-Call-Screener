@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive Icon — FOREGROUND layer.
+    Canvas: 108dp × 108dp.  Safe zone (guaranteed visible): inner 72dp × 72dp.
+
+    Design: A bold shield with a phone handset centred inside it.
+    Rendered in white (#FFFFFF) so it works on any background colour,
+    including the Android 13 "themed icons" monochrome layer.
+
+    Shield path: classic heraldic shape, scaled to sit comfortably in the
+    safe zone with breathing room from the edge.
+
+    Phone handset path: standard Material Design phone icon, centred inside
+    the shield body.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- ── Shield body ──────────────────────────────────────────────── -->
+    <!--
+        The shield is drawn on the 108×108 viewport.
+        Top: y=14  Bottom: y=96  Left: x=18  Right: x=90  Centre-x: 54
+        The tip converges to (54, 96).
+    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M54,14
+            L18,28
+            L18,55
+            C18,75 34,90 54,96
+            C74,90 90,75 90,55
+            L90,28
+            Z" />
+
+    <!-- ── Phone handset (white cut-out from shield) ─────────────────── -->
+    <!--
+        Uses a slightly-off-white/transparent trick: draw the handset in the
+        background colour so it appears as a negative space "cut" through the
+        shield, giving a clean two-tone icon.
+        Handset is centred at (54, 55), scaled ~24dp.
+    -->
+    <path
+        android:fillColor="#6C63EB"
+        android:pathData="
+            M43.3,47.8
+            C44.7,50.6 47.1,53 49.9,54.4
+            L52.1,52.2
+            C52.4,51.9 52.8,51.8 53.1,52
+            C54.2,52.4 55.4,52.6 56.6,52.6
+            C57.2,52.6 57.6,53 57.6,53.6
+            L57.6,57.2
+            C57.6,57.8 57.2,58.2 56.6,58.2
+            C48.5,58.2 42,51.7 42,43.6
+            C42,43 42.4,42.6 43,42.6
+            L46.6,42.6
+            C47.2,42.6 47.6,43 47.6,43.6
+            C47.6,44.8 47.8,46 48.2,47.1
+            C48.4,47.4 48.3,47.8 48,48.1
+            Z" />
+
+</vector>

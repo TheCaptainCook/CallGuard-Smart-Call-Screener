@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive Icon — BACKGROUND layer.
+
+    This is a solid indigo gradient fill. The background is a 108dp × 108dp
+    canvas. The system clips 66.67dp from the centre outwards, so the design
+    zone is the inner 72dp area.
+
+    Uses a gradient from brand_primary (#6C63EB) to brand_primary_dark (#4A42C8)
+    going top-left to bottom-right for a premium feel.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="linear"
+        android:angle="135"
+        android:startColor="#6C63EB"
+        android:centerColor="#5A52D5"
+        android:endColor="#4A42C8" />
+</shape>

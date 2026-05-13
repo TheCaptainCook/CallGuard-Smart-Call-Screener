@@ -1,0 +1,46 @@
+# Built artifacts
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+
+# Gradle files
+.gradle/
+build/
+
+# Android Studio local configuration
+local.properties
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+captures/
+.externalNativeBuild
+.cxx
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+
+# Log files
+*.log
+
+# Android Profiler
+*.hprof
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme — dark, Material You -->
+    <style name="Theme.CallGuard" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryVariant">@color/brand_primary_dark</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSurface">@color/card_surface</item>
+        <item name="android:colorBackground">@color/bg_primary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Incoming call overlay — full-screen, no system chrome -->
+    <style name="Theme.CallGuard.IncomingCall" parent="Theme.CallGuard">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/bg_call_screen</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Toolbar Title -->
+    <style name="TextAppearance.CallGuard.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive Icon — Android 8.0+ (API 26+)
+    The system will mask this into the shape chosen by the launcher
+    (circle, squircle, rounded square, etc.)
+
+    foreground: ic_launcher_foreground.xml  — the actual icon art (108dp canvas)
+    background: ic_launcher_background.xml  — solid/gradient background fill
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!-- monochrome layer for Android 13+ themed icons -->
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

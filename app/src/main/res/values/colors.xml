@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Colors -->
+    <color name="brand_primary">#6C63EB</color>       <!-- Deep indigo/violet -->
+    <color name="brand_primary_dark">#4A42C8</color>
+    <color name="brand_secondary">#00D4AA</color>     <!-- Teal accent -->
+
+    <!-- Backgrounds -->
+    <color name="bg_primary">#0F0F1A</color>          <!-- Deep dark navy -->
+    <color name="bg_secondary">#1A1A2E</color>
+    <color name="bg_call_screen">#0D0D14</color>      <!-- Nearly black for call UI -->
+    <color name="card_surface">#1E1E32</color>
+
+    <!-- Text -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#A0A0BC</color>
+    <color name="text_hint">#606080</color>
+
+    <!-- Status -->
+    <color name="status_active">#6C63EB</color>
+    <color name="status_inactive">#2A2A3E</color>
+
+    <!-- Accent -->
+    <color name="accent">#6C63EB</color>
+
+    <!-- Warning -->
+    <color name="warning_bg">#2D2000</color>
+    <color name="warning_border">#FF9800</color>
+    <color name="warning_text">#FFB74D</color>
+
+    <!-- Call Action Buttons -->
+    <color name="action_answer">#00C853</color>
+    <color name="action_decline">#D50000</color>
+
+    <!-- Avatar placeholder -->
+    <color name="avatar_bg">#3D3563</color>
+</resources>

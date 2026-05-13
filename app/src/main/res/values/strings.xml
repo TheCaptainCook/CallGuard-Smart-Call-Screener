@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">CallGuard</string>
+
+    <!-- Status Card -->
+    <string name="status_active">Screening Active</string>
+    <string name="status_active_subtitle">CallGuard is protecting your calls</string>
+    <string name="status_inactive">Screening Paused</string>
+    <string name="status_inactive_subtitle">Tap the toggle to enable screening</string>
+
+    <!-- Settings Section -->
+    <string name="settings_header">Screening Settings</string>
+    <string name="greeting_label">VOICE GREETING</string>
+    <string name="greeting_hint">Type your custom greeting here…</string>
+    <string name="ring_delay_label">ANSWER AFTER</string>
+    <string name="ring_delay_format">%ds</string>
+
+    <!-- Permissions -->
+    <string name="permission_warning_text">Some permissions are required for call screening to work. Tap Grant to enable them.</string>
+    <string name="grant">Grant</string>
+
+    <!-- Incoming Call Screen -->
+    <string name="screening_in_progress">Screening this call…</string>
+    <string name="screening_badge">● SCREENING</string>
+    <string name="take_call">Take Call</string>
+    <string name="hang_up">Hang Up</string>
+
+    <!-- Default Greeting (matches GreetingEngine.DEFAULT_GREETING) -->
+    <string name="default_greeting">Hi, this is an automated assistant. The person you\'re calling cannot answer right now. Please state your name and reason for calling.</string>
+</resources>
