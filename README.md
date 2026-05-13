@@ -52,7 +52,7 @@ The project is built with a modular approach for maximum performance and reliabi
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/CallGuard.git
+   git clone https://github.com/TheCaptainCook/CallGuard-Smart-Call-Screener.git
    ```
 2. Open the project in Android Studio.
 3. Build and run on your device.
