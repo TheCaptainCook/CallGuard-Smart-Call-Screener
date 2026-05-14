@@ -1,5 +1,6 @@
 package com.callguard.app.screening;
 
+import android.content.Intent;
 import android.telecom.Call;
 import android.telecom.InCallService;
 import android.util.Log;
@@ -38,10 +39,16 @@ public class CallScreeningService extends InCallService {
     @Override
     public void onCallAdded(Call call) {
         super.onCallAdded(call);
+
+        if (call == null) {
+            Log.w(TAG, "onCallAdded — received null call object, ignoring.");
+            return;
+        }
+
         Log.d(TAG, "onCallAdded — state: " + call.getState());
 
         // Register our callback to track state transitions for this call
-        call.registerCallback(new CallCallback(this, call));
+        call.registerCallback(new CallCallback(this));
 
         // If the call is already ringing, trigger screening immediately
         if (call.getState() == Call.STATE_RINGING) {
@@ -69,29 +76,37 @@ public class CallScreeningService extends InCallService {
      * @param call The ringing {@link Call}.
      */
     void handleIncomingCall(Call call) {
-        PreferencesManager prefs = new PreferencesManager(this);
-        if (!prefs.isScreeningEnabled()) {
-            Log.d(TAG, "Screening disabled — allowing call to ring normally.");
-            return;
+        try {
+            PreferencesManager prefs = new PreferencesManager(this);
+            if (!prefs.isScreeningEnabled()) {
+                Log.d(TAG, "Screening disabled — allowing call to ring normally.");
+                return;
+            }
+
+            String callerNumber = extractCallerNumber(call);
+            Log.i(TAG, "Mode A — incoming call from: " + callerNumber + ". Starting screening service.");
+
+            Intent serviceIntent = new Intent(this, ScreeningForegroundService.class);
+            serviceIntent.setAction(ScreeningForegroundService.ACTION_START_SCREENING);
+            serviceIntent.putExtra(ScreeningForegroundService.EXTRA_CALLER_NUMBER, callerNumber);
+            startForegroundService(serviceIntent);
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting screening service: " + e.getMessage(), e);
         }
-
-        String callerNumber = extractCallerNumber(call);
-        Log.i(TAG, "Mode A — incoming call from: " + callerNumber + ". Starting screening service.");
-
-        android.content.Intent serviceIntent = new android.content.Intent(this, ScreeningForegroundService.class);
-        serviceIntent.setAction(ScreeningForegroundService.ACTION_START_SCREENING);
-        serviceIntent.putExtra(ScreeningForegroundService.EXTRA_CALLER_NUMBER, callerNumber);
-        // Pass the call details for programmatic answer via this InCallService
-        startForegroundService(serviceIntent);
     }
 
     /**
      * Sends a stop action to the screening foreground service.
      */
     void stopScreeningService() {
-        android.content.Intent serviceIntent = new android.content.Intent(this, ScreeningForegroundService.class);
-        serviceIntent.setAction(ScreeningForegroundService.ACTION_STOP_SCREENING);
-        startService(serviceIntent);
+        try {
+            Intent serviceIntent = new Intent(this, ScreeningForegroundService.class);
+            serviceIntent.setAction(ScreeningForegroundService.ACTION_STOP_SCREENING);
+            startService(serviceIntent);
+        } catch (Exception e) {
+            // Service may already be stopped or app may be in the background
+            Log.w(TAG, "Could not stop screening service: " + e.getMessage());
+        }
     }
 
     /**
@@ -127,6 +142,7 @@ public class CallScreeningService extends InCallService {
      */
     private String extractCallerNumber(Call call) {
         try {
+            if (call == null) return "unknown";
             Call.Details details = call.getDetails();
             if (details != null && details.getHandle() != null) {
                 return details.getHandle().getSchemeSpecificPart();
@@ -144,20 +160,24 @@ public class CallScreeningService extends InCallService {
     /**
      * Monitors state changes for a specific {@link Call} and routes events
      * to the appropriate handler within the service.
+     *
+     * Note: Does NOT hold a strong reference to the Call object.
+     * The Call is delivered fresh via the onStateChanged() parameter.
      */
     private static class CallCallback extends Call.Callback {
 
         private final CallScreeningService service;
-        private final Call call;
 
-        CallCallback(CallScreeningService service, Call call) {
+        CallCallback(CallScreeningService service) {
             this.service = service;
-            this.call = call;
         }
 
         @Override
         public void onStateChanged(Call call, int state) {
             Log.d(TAG, "Call state changed to: " + stateToString(state));
+
+            if (call == null) return;
+
             switch (state) {
                 case Call.STATE_RINGING:
                     service.handleIncomingCall(call);
@@ -165,6 +185,12 @@ public class CallScreeningService extends InCallService {
                 case Call.STATE_DISCONNECTED:
                 case Call.STATE_DISCONNECTING:
                     service.stopScreeningService();
+                    // Unregister this callback — call is ending
+                    try {
+                        call.unregisterCallback(this);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not unregister callback: " + e.getMessage());
+                    }
                     break;
                 default:
                     break;

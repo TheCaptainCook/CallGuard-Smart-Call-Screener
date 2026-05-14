@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -129,6 +130,10 @@ public class NotificationHelper {
 
         NotificationManager manager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        manager.notify(summaryNotificationId++, notification);
+        if (manager != null) {
+            manager.notify(summaryNotificationId++, notification);
+        } else {
+            Log.w("NotificationHelper", "NotificationManager unavailable — cannot post summary.");
+        }
     }
 }

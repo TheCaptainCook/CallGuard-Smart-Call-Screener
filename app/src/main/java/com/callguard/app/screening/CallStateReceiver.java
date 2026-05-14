@@ -29,6 +29,10 @@ public class CallStateReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null) {
+            return;
+        }
+
         if (!TelephonyManager.ACTION_PHONE_STATE_CHANGED.equals(intent.getAction())) {
             return;
         }
@@ -68,22 +72,28 @@ public class CallStateReceiver extends BroadcastReceiver {
      */
     private void handleRinging(Context context, String incomingNumber) {
         // Check if screening is enabled in preferences before doing anything
-        PreferencesManager prefs = new PreferencesManager(context);
-        if (!prefs.isScreeningEnabled()) {
-            Log.d(TAG, "Screening is disabled in settings — ignoring incoming call.");
-            return;
+        try {
+            PreferencesManager prefs = new PreferencesManager(context);
+            if (!prefs.isScreeningEnabled()) {
+                Log.d(TAG, "Screening is disabled in settings — ignoring incoming call.");
+                return;
+            }
+
+            Log.i(TAG, "Incoming call detected — starting screening service for: "
+                    + (incomingNumber != null ? incomingNumber : "[private number]"));
+
+            Intent serviceIntent = new Intent(context, ScreeningForegroundService.class);
+            serviceIntent.setAction(ScreeningForegroundService.ACTION_START_SCREENING);
+            serviceIntent.putExtra(ScreeningForegroundService.EXTRA_CALLER_NUMBER, incomingNumber);
+
+            // Must use startForegroundService on API 26+ to ensure the service
+            // can post its foreground notification within 5 seconds.
+            context.startForegroundService(serviceIntent);
+        } catch (Exception e) {
+            // Android 12+ can throw ForegroundServiceStartNotAllowedException
+            // if app is not in a valid state to start foreground services.
+            Log.e(TAG, "Failed to start screening service: " + e.getMessage(), e);
         }
-
-        Log.i(TAG, "Incoming call detected — starting screening service for: "
-                + (incomingNumber != null ? incomingNumber : "[private number]"));
-
-        Intent serviceIntent = new Intent(context, ScreeningForegroundService.class);
-        serviceIntent.setAction(ScreeningForegroundService.ACTION_START_SCREENING);
-        serviceIntent.putExtra(ScreeningForegroundService.EXTRA_CALLER_NUMBER, incomingNumber);
-
-        // Must use startForegroundService on API 26+ to ensure the service
-        // can post its foreground notification within 5 seconds.
-        context.startForegroundService(serviceIntent);
     }
 
     /**
@@ -92,8 +102,13 @@ public class CallStateReceiver extends BroadcastReceiver {
      * @param context The application context.
      */
     private void stopScreeningService(Context context) {
-        Intent serviceIntent = new Intent(context, ScreeningForegroundService.class);
-        serviceIntent.setAction(ScreeningForegroundService.ACTION_STOP_SCREENING);
-        context.startService(serviceIntent);
+        try {
+            Intent serviceIntent = new Intent(context, ScreeningForegroundService.class);
+            serviceIntent.setAction(ScreeningForegroundService.ACTION_STOP_SCREENING);
+            context.startService(serviceIntent);
+        } catch (Exception e) {
+            // Service may not be running — this is normal on first IDLE state
+            Log.w(TAG, "Could not stop screening service (may not be running): " + e.getMessage());
+        }
     }
 }

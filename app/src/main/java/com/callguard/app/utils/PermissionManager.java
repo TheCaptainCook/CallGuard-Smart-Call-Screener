@@ -36,6 +36,7 @@ public class PermissionManager {
     static {
         List<String> perms = new ArrayList<>();
         perms.add(Manifest.permission.READ_PHONE_STATE);
+        perms.add(Manifest.permission.RECORD_AUDIO);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             perms.add(Manifest.permission.ANSWER_PHONE_CALLS);
