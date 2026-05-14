@@ -28,4 +28,12 @@
 
     <!-- Default Greeting (matches GreetingEngine.DEFAULT_GREETING) -->
     <string name="default_greeting">Hi, this is an automated assistant. The person you\'re calling cannot answer right now. Please state your name and reason for calling.</string>
+
+    <!-- Phase 2: Dashboard Stats -->
+    <string name="stats_total_calls">Total Calls</string>
+    <string name="stats_spam_blocked">Spam Blocked</string>
+    <string name="stats_time_saved">Time Saved</string>
+    <string name="stats_minutes_format">%dm</string>
+    <string name="history_header">Recent Calls</string>
+    <string name="history_empty">No screened calls yet.\nCalls will appear here after screening.</string>
 </resources>

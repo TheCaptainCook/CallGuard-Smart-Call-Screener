@@ -10,8 +10,15 @@ android {
         applicationId "com.callguard.app"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0-mvp"
+        versionCode 2
+        versionName "2.0.0"
+
+        // Required by Room schema export
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas"]
+            }
+        }
     }
 
     buildTypes {
@@ -26,7 +33,6 @@ android {
     }
 
     compileOptions {
-        // Phase 1 is Java only — no Kotlin
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -43,6 +49,18 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.core:core:1.13.1'
 
-    // Lifecycle (for ViewModel usage in later phases)
+    // RecyclerView — Phase 2 history list
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+
+    // Room — Phase 2 local database
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+
+    // Lifecycle — ViewModels & LiveData for dashboard
     implementation 'androidx.lifecycle:lifecycle-runtime:2.8.3'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.3'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.8.3'
+
+    // Biometric — Phase 3 dashboard lock
+    implementation 'androidx.biometric:biometric:1.2.0-alpha05'
 }

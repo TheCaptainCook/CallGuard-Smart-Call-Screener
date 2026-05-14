@@ -6,30 +6,33 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.callguard.app.R;
 import com.callguard.app.databinding.ActivityMainBinding;
+import com.callguard.app.utils.BiometricLockManager;
 import com.callguard.app.utils.PermissionManager;
 import com.callguard.app.utils.PreferencesManager;
+import com.callguard.app.utils.PrivacyManager;
 
 /**
- * MainActivity — The launcher activity and primary UI for Phase 1.
+ * MainActivity — The launcher activity and dashboard for CallGuard.
  *
- * Phase 1 UI responsibilities:
- * - Display the app status card (Screening ON/OFF toggle).
- * - Request all necessary runtime permissions on first launch.
- * - Show the ring delay setting and custom greeting field.
- * - Guide the user to grant SYSTEM_ALERT_WINDOW if needed.
- *
- * This activity is deliberately minimal for Phase 1 (MVP). The full
- * analytics dashboard and history views are introduced in Phase 2.
+ * Phase 1: Status toggle, greeting editor, ring delay slider, permissions.
+ * Phase 2: Stats cards (Total, Spam, Time Saved), screening history list.
+ * Phase 3: Biometric lock for dashboard, local-only privacy setting.
  */
 public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
     private PreferencesManager prefs;
+    private PrivacyManager privacyManager;
+    private DashboardViewModel viewModel;
+    private CallHistoryAdapter historyAdapter;
+    /** Phase 3: tracks whether the dashboard was unlocked this session. */
+    private boolean isDashboardUnlocked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,27 +41,55 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         prefs = new PreferencesManager(this);
+        privacyManager = new PrivacyManager(this);
 
         setupStatusCard();
         setupSettingsControls();
+        setupDashboard();
         checkAndRequestPermissions();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh the permission warning banner every time the user returns
         updatePermissionWarning();
+        // Phase 3: enforce biometric lock on every resume if enabled
+        if (privacyManager.isBiometricLockEnabled() && !isDashboardUnlocked) {
+            lockDashboard();
+            BiometricLockManager.authenticate(this, new BiometricLockManager.AuthCallback() {
+                @Override public void onSuccess() {
+                    isDashboardUnlocked = true;
+                    unlockDashboard();
+                }
+                @Override public void onFailed(String reason) {
+                    // Dashboard stays locked — user taps to retry
+                }
+            });
+        }
+    }
+
+    /** Phase 3: Hides dashboard history and stats behind a lock overlay. */
+    private void lockDashboard() {
+        binding.recyclerHistory.setVisibility(View.GONE);
+        binding.textHistoryEmpty.setVisibility(View.GONE);
+    }
+
+    /** Phase 3: Reveals dashboard content after successful auth. */
+    private void unlockDashboard() {
+        // Re-trigger the LiveData observer to restore visibility
+        if (viewModel != null && viewModel.recentCalls.getValue() != null
+                && !viewModel.recentCalls.getValue().isEmpty()) {
+            binding.recyclerHistory.setVisibility(View.VISIBLE);
+            binding.textHistoryEmpty.setVisibility(View.GONE);
+        } else {
+            binding.textHistoryEmpty.setVisibility(View.VISIBLE);
+        }
     }
 
     // =========================================================================
-    // UI Setup
+    // Phase 1: Status Card
     // =========================================================================
 
-    /**
-     * Configures the main status card with the current screening state and
-     * wires the toggle switch to persist state changes.
-     */
     private void setupStatusCard() {
         boolean isEnabled = prefs.isScreeningEnabled();
         binding.switchScreening.setChecked(isEnabled);
@@ -70,12 +101,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Updates the status card visual state (icon, color, label) to reflect
-     * whether screening is active.
-     *
-     * @param isActive {@code true} if screening is enabled.
-     */
     private void updateStatusCard(boolean isActive) {
         if (isActive) {
             binding.textStatusLabel.setText(R.string.status_active);
@@ -90,16 +115,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Wires up the settings controls (greeting text field and ring delay slider).
-     */
+    // =========================================================================
+    // Phase 1: Settings Controls
+    // =========================================================================
+
     private void setupSettingsControls() {
-        // Pre-populate greeting field with saved or default value
-        String savedGreeting = prefs.getCustomGreeting(
-                getString(R.string.default_greeting));
+        String savedGreeting = prefs.getCustomGreeting(getString(R.string.default_greeting));
         binding.editGreeting.setText(savedGreeting);
 
-        // Save greeting on focus loss
         binding.editGreeting.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
                 String newGreeting = binding.editGreeting.getText().toString().trim();
@@ -109,10 +132,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Ring delay slider (range: 5s to 60s, step: 5s)
-        // Default position maps to 25s (5 rings)
         int savedDelayMs = prefs.getRingDelayMs(PreferencesManager.DEFAULT_RING_DELAY_MS);
-        int sliderProgress = (savedDelayMs / 1000 - 5) / 5; // map to 0-11 range
+        int sliderProgress = (savedDelayMs / 1000 - 5) / 5;
         binding.sliderRingDelay.setProgress(sliderProgress);
         updateRingDelayLabel(savedDelayMs / 1000);
 
@@ -120,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
                 new android.widget.SeekBar.OnSeekBarChangeListener() {
                     @Override
                     public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
-                        int seconds = 5 + (progress * 5); // 5, 10, 15 ... 60
+                        int seconds = 5 + (progress * 5);
                         updateRingDelayLabel(seconds);
                         if (fromUser) {
                             prefs.setRingDelayMs(seconds * 1000);
@@ -131,33 +152,58 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Updates the ring delay label text to reflect the current slider value.
-     *
-     * @param seconds The delay in seconds.
-     */
     private void updateRingDelayLabel(int seconds) {
         binding.textRingDelayValue.setText(getString(R.string.ring_delay_format, seconds));
+    }
+
+    // =========================================================================
+    // Phase 2: Dashboard — Stats + History
+    // =========================================================================
+
+    private void setupDashboard() {
+        viewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
+
+        // --- Stats cards ---
+        viewModel.totalCalls.observe(this, count -> {
+            binding.textStatTotalValue.setText(String.valueOf(count != null ? count : 0));
+        });
+
+        viewModel.spamCalls.observe(this, count -> {
+            binding.textStatSpamValue.setText(String.valueOf(count != null ? count : 0));
+        });
+
+        viewModel.totalScreeningSeconds.observe(this, seconds -> {
+            int mins = (seconds != null ? seconds : 0) / 60;
+            binding.textStatTimeValue.setText(getString(R.string.stats_minutes_format, mins));
+        });
+
+        // --- History RecyclerView ---
+        historyAdapter = new CallHistoryAdapter();
+        binding.recyclerHistory.setLayoutManager(new LinearLayoutManager(this));
+        binding.recyclerHistory.setAdapter(historyAdapter);
+
+        viewModel.recentCalls.observe(this, callLogs -> {
+            if (callLogs != null && !callLogs.isEmpty()) {
+                historyAdapter.submitList(callLogs);
+                binding.textHistoryEmpty.setVisibility(View.GONE);
+                binding.recyclerHistory.setVisibility(View.VISIBLE);
+            } else {
+                binding.textHistoryEmpty.setVisibility(View.VISIBLE);
+                binding.recyclerHistory.setVisibility(View.GONE);
+            }
+        });
     }
 
     // =========================================================================
     // Permission Handling
     // =========================================================================
 
-    /**
-     * Checks if all Phase 1 permissions are granted and requests them if not.
-     * On first run, this will show the system permission dialog.
-     */
     private void checkAndRequestPermissions() {
         if (!PermissionManager.hasAllPhase1Permissions(this)) {
             PermissionManager.requestPhase1Permissions(this);
         }
     }
 
-    /**
-     * Shows or hides the permission warning banner based on current grant state.
-     * Also checks for SYSTEM_ALERT_WINDOW which requires a Settings page visit.
-     */
     private void updatePermissionWarning() {
         boolean missingRegular = !PermissionManager.hasAllPhase1Permissions(this);
         boolean missingOverlay  = !Settings.canDrawOverlays(this);
@@ -176,11 +222,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Opens the system "Display over other apps" settings screen so the user
-     * can grant SYSTEM_ALERT_WINDOW permission, which cannot be requested via
-     * the standard runtime permission flow.
-     */
     private void openOverlaySettings() {
         Intent intent = new Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,

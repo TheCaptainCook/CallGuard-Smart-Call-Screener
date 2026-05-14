@@ -19,6 +19,7 @@
 !README.md
 !LICENSE
 !CONTRIBUTING.md
+!IMPLEMENTED_FEATURES.md
 
 # ── Step 4: Gradle wrapper (properties only, not the jar binary) ──
 !gradle/

@@ -14,20 +14,34 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.callguard.app.conversation.GreetingEngine;
+import com.callguard.app.conversation.SpeechToTextManager;
+import com.callguard.app.data.CallGuardDatabase;
+import com.callguard.app.data.CallLog;
+import com.callguard.app.data.CallLogDao;
+import com.callguard.app.data.Transcript;
+import com.callguard.app.spam.MlSpamAnalyser;
+import com.callguard.app.spam.SpamDetector;
+import com.callguard.app.spam.StirShakenVerifier;
+import com.callguard.app.utils.ContactsHelper;
 import com.callguard.app.utils.NotificationHelper;
 import com.callguard.app.utils.PreferencesManager;
+import com.callguard.app.utils.PrivacyManager;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * ScreeningForegroundService — The orchestrator of the Phase 1 screening flow.
+ * ScreeningForegroundService — The orchestrator of the call screening flow.
  *
  * This foreground service is the backbone of the call screening engine. Running
  * as a foreground service ensures Android does not kill it during an active call.
  *
- * Screening Workflow:
- * 1. {@code ACTION_START_SCREENING} received → post foreground notification.
+ * Screening Workflow (Phase 1 + Phase 2):
+ * 1. {@code ACTION_START_SCREENING} received → run spam/contact checks → post notification.
  * 2. Wait for the configurable ring delay (default: 5 rings ≈ 25s).
- * 3. After delay: start the {@link GreetingEngine} to play the TTS greeting.
- * 4. {@code ACTION_STOP_SCREENING} received → cancel timer, stop TTS, stop self.
+ * 3. After delay: start the {@link GreetingEngine} + {@link SpeechToTextManager}.
+ * 4. On greeting complete → save CallLog + Transcript to Room DB → stop.
+ * 5. {@code ACTION_STOP_SCREENING} received → cancel timer, stop TTS/STT, persist, stop self.
  */
 public class ScreeningForegroundService extends Service {
 
@@ -52,6 +66,13 @@ public class ScreeningForegroundService extends Service {
     private GreetingEngine greetingEngine;
     private PowerManager.WakeLock wakeLock;
 
+    // Phase 2 components
+    private SpeechToTextManager sttManager;
+    private CallLogDao callLogDao;
+    private ExecutorService dbExecutor;
+    private long currentCallLogId = -1;
+    private long screeningStartTimeMs;
+
     private String currentCallerNumber;
     private boolean isScreening = false;
     private boolean isDestroyed = false;
@@ -62,8 +83,11 @@ public class ScreeningForegroundService extends Service {
         mainHandler = new Handler(Looper.getMainLooper());
         greetingEngine = new GreetingEngine(this);
 
+        // Phase 2: initialize DB access and STT
+        callLogDao = CallGuardDatabase.getInstance(this).callLogDao();
+        dbExecutor = Executors.newSingleThreadExecutor();
+
         // Acquire a partial wake lock so the CPU stays active during audio playback.
-        // Guard against null in case PowerManager is unavailable (emulators).
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
             wakeLock = pm.newWakeLock(
@@ -94,7 +118,6 @@ public class ScreeningForegroundService extends Service {
             stopScreening("external stop command");
 
         } else if (ACTION_USER_TAKE_CALL.equals(action)) {
-            // User tapped "Take Call" in the notification — hand the call back
             stopScreening("user took the call");
 
         } else {
@@ -102,7 +125,6 @@ public class ScreeningForegroundService extends Service {
             stopSelf();
         }
 
-        // START_NOT_STICKY: if killed by system, do not restart without an explicit intent
         return START_NOT_STICKY;
     }
 
@@ -115,13 +137,25 @@ public class ScreeningForegroundService extends Service {
     @Override
     public void onDestroy() {
         isDestroyed = true;
-        // Cancel timer and release TTS without calling stopSelf() again
         cancelAnswerTimer();
+
+        // Phase 2: stop STT
+        if (sttManager != null) {
+            sttManager.stopListening();
+            sttManager.destroy();
+            sttManager = null;
+        }
+
         if (greetingEngine != null) {
             greetingEngine.shutdown();
             greetingEngine = null;
         }
         releaseWakeLock();
+
+        if (dbExecutor != null && !dbExecutor.isShutdown()) {
+            dbExecutor.shutdown();
+        }
+
         super.onDestroy();
         Log.d(TAG, "Service destroyed.");
     }
@@ -132,9 +166,11 @@ public class ScreeningForegroundService extends Service {
 
     /**
      * Initiates the screening workflow:
-     * 1. Promotes service to foreground with a notification.
-     * 2. Acquires wake lock.
-     * 3. Schedules the auto-answer timer.
+     * 1. Phase 2: Run spam detection + contact whitelist check.
+     * 2. Create a CallLog entry in Room.
+     * 3. If known contact → skip screening, log as "user_answered".
+     * 4. Promote to foreground with notification.
+     * 5. Acquire wake lock + schedule auto-answer timer.
      *
      * @param callerNumber The incoming caller's phone number (may be null).
      */
@@ -144,11 +180,63 @@ public class ScreeningForegroundService extends Service {
             return;
         }
         isScreening = true;
+        screeningStartTimeMs = System.currentTimeMillis();
         Log.i(TAG, "--- SCREENING STARTED for: " + callerNumber + " ---");
 
+        // Phase 2: Run spam detection (zero-latency, on main thread is fine)
+        SpamDetector.SpamResult spamResult = SpamDetector.analyse(callerNumber);
+
+        // Phase 3: ML pattern analysis + STIR/SHAKEN run on BG thread with DB access
+        dbExecutor.execute(() -> {
+            // Load recent history for ML + STIR/SHAKEN frequency checks
+            java.util.List<CallLog> history = callLogDao.getRecentHistorySync(50);
+
+            // Phase 3a: ML spam analysis
+            MlSpamAnalyser.MlResult mlResult = MlSpamAnalyser.analyse(callerNumber, history);
+
+            // Phase 3b: STIR/SHAKEN attestation
+            StirShakenVerifier.AttestationResult attestation =
+                    StirShakenVerifier.verify(callerNumber, history);
+
+            // Contact whitelist check
+            boolean isContact = ContactsHelper.isKnownContact(this, callerNumber);
+
+            // Create and persist the call log entry
+            CallLog callLog = new CallLog(callerNumber, screeningStartTimeMs);
+            // Phase 2 fields
+            callLog.isSpam = spamResult.isSpam || mlResult.isSpam;
+            callLog.spamScore = Math.max(spamResult.score, mlResult.score);
+            callLog.isKnownContact = isContact;
+            // Phase 3 fields
+            callLog.mlSpamScore = mlResult.score;
+            callLog.attestationLevel = attestation.level.name();
+
+            if (isContact) {
+                callLog.outcome = "user_answered";
+                callLogDao.insertCallLog(callLog);
+                Log.i(TAG, "Caller is a known contact — skipping screening.");
+                mainHandler.post(() -> stopScreening("known contact"));
+                return;
+            }
+
+            currentCallLogId = callLogDao.insertCallLog(callLog);
+            Log.d(TAG, "CallLog inserted id=" + currentCallLogId
+                    + " attestation=" + attestation.level
+                    + " mlScore=" + mlResult.score);
+
+            mainHandler.post(() -> {
+                if (isDestroyed || !isScreening) return;
+                continueScreeningSetup(callerNumber);
+            });
+        });
+    }
+
+    /**
+     * Continues the screening setup after the background DB/contact work is done.
+     * This runs on the main thread.
+     */
+    private void continueScreeningSetup(String callerNumber) {
         // Step 1: Promote to foreground immediately to avoid ANR.
-        // On Android 14+ (API 34), startForeground() MUST include the service type flags
-        // or the OS throws MissingForegroundServiceTypeException.
         Notification notification = NotificationHelper.buildScreeningNotification(this, callerNumber);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -163,7 +251,6 @@ public class ScreeningForegroundService extends Service {
 
         // Step 2: Acquire wake lock
         if (wakeLock != null && !wakeLock.isHeld()) {
-            // Max hold: ring delay + 1 min buffer so we never leak the lock
             wakeLock.acquire(DEFAULT_RING_DELAY_MS + 60_000L);
         }
 
@@ -174,9 +261,7 @@ public class ScreeningForegroundService extends Service {
     }
 
     /**
-     * Schedules the Runnable that will trigger TTS greeting after a delay.
-     *
-     * @param delayMs Delay in milliseconds before playing the greeting.
+     * Schedules the Runnable that will trigger TTS greeting + STT after a delay.
      */
     private void scheduleAutoAnswer(int delayMs) {
         answerCallRunnable = () -> {
@@ -189,18 +274,44 @@ public class ScreeningForegroundService extends Service {
                 return;
             }
 
+            // Phase 2+3: Start STT to capture the caller's response after greeting
+            boolean localOnly = new PrivacyManager(this).isLocalOnlyEnabled();
+            sttManager = new SpeechToTextManager(this, (text, confidence) -> {
+                Log.i(TAG, "STT transcript received: \"" + text + "\" (confidence=" + confidence + ")");
+                // Persist transcript to Room
+                if (currentCallLogId > 0 && text != null && !text.isEmpty()) {
+                    dbExecutor.execute(() -> {
+                        Transcript transcript = new Transcript(currentCallLogId, text, confidence);
+                        callLogDao.insertTranscript(transcript);
+                        Log.d(TAG, "Transcript saved for callLogId=" + currentCallLogId);
+                    });
+                }
+            }, localOnly);
+
             greetingEngine.playGreeting(currentCallerNumber, () -> {
                 // GreetingCallback fires on the TTS engine's internal thread.
-                // All UI/service operations must run on the main thread.
                 mainHandler.post(() -> {
                     if (isDestroyed || !isScreening) return;
-                    Log.i(TAG, "Greeting playback complete.");
+
+                    Log.i(TAG, "Greeting playback complete — starting STT listener.");
+                    // Start listening for the caller's response
+                    if (sttManager != null) {
+                        sttManager.startListening();
+                    }
+
+                    // Update notification to indicate we're now listening
                     NotificationHelper.postCallSummaryNotification(
                             ScreeningForegroundService.this,
                             currentCallerNumber,
-                            "Caller greeted. Awaiting further input."
+                            "Caller greeted. Listening for response..."
                     );
-                    stopScreening("greeting complete");
+
+                    // Auto-stop screening after 30s of listening (caller has had their turn)
+                    mainHandler.postDelayed(() -> {
+                        if (isScreening) {
+                            stopScreening("listening timeout");
+                        }
+                    }, 30_000);
                 });
             });
         };
@@ -221,7 +332,7 @@ public class ScreeningForegroundService extends Service {
     }
 
     /**
-     * Cleanly shuts down the screening session.
+     * Cleanly shuts down the screening session. Persists final call duration to Room.
      *
      * @param reason A human-readable string explaining why screening stopped.
      */
@@ -231,12 +342,32 @@ public class ScreeningForegroundService extends Service {
         Log.i(TAG, "--- SCREENING STOPPED: " + reason + " ---");
 
         cancelAnswerTimer();
+
+        // Phase 2: Stop STT
+        if (sttManager != null) {
+            sttManager.stopListening();
+        }
+
         if (greetingEngine != null) {
             greetingEngine.stopGreeting();
         }
+
+        // Phase 2: Persist final duration + outcome to Room
+        if (currentCallLogId > 0) {
+            int durationSeconds = (int) ((System.currentTimeMillis() - screeningStartTimeMs) / 1000);
+            dbExecutor.execute(() -> {
+                CallLog log = callLogDao.getCallLogById(currentCallLogId);
+                if (log != null) {
+                    log.durationSeconds = durationSeconds;
+                    log.outcome = reason.contains("user") ? "user_answered" : "screened";
+                    callLogDao.updateCallLog(log);
+                    Log.d(TAG, "CallLog updated: duration=" + durationSeconds + "s outcome=" + log.outcome);
+                }
+            });
+        }
+
         releaseWakeLock();
 
-        // API 33+ deprecates stopForeground(boolean); use the int-flag overload instead.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE);
         } else {

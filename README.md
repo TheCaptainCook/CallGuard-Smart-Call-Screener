@@ -10,6 +10,8 @@
 
 ## ✨ Key Features
 
+> **Tracking Progress:** To see exactly which features are currently built, tested, and running in the app, please see the [**Implemented Features Tracker**](IMPLEMENTED_FEATURES.md).
+
 ### 🎙️ AI Call Screening
 - **Automated Assistant:** Automatically answers calls from unknown numbers after a custom ring duration.
 - **Real-Time Transcription:** Watch the conversation happen in real-time with high-accuracy speech-to-text.
