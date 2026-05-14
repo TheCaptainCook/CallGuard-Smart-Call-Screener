@@ -1,9 +1,10 @@
 package com.callguard.app.screening;
 
 import android.app.Notification;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -13,7 +14,6 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.callguard.app.conversation.GreetingEngine;
-import com.callguard.app.ui.MainActivity;
 import com.callguard.app.utils.NotificationHelper;
 import com.callguard.app.utils.PreferencesManager;
 
@@ -26,9 +26,8 @@ import com.callguard.app.utils.PreferencesManager;
  * Screening Workflow:
  * 1. {@code ACTION_START_SCREENING} received → post foreground notification.
  * 2. Wait for the configurable ring delay (default: 5 rings ≈ 25s).
- * 3. After delay: command the call to be answered via {@link CallScreeningService}.
- * 4. Start the {@link GreetingEngine} to play the TTS greeting.
- * 5. {@code ACTION_STOP_SCREENING} received → cancel timer, stop TTS, stop self.
+ * 3. After delay: start the {@link GreetingEngine} to play the TTS greeting.
+ * 4. {@code ACTION_STOP_SCREENING} received → cancel timer, stop TTS, stop self.
  */
 public class ScreeningForegroundService extends Service {
 
@@ -55,6 +54,7 @@ public class ScreeningForegroundService extends Service {
 
     private String currentCallerNumber;
     private boolean isScreening = false;
+    private boolean isDestroyed = false;
 
     @Override
     public void onCreate() {
@@ -62,9 +62,17 @@ public class ScreeningForegroundService extends Service {
         mainHandler = new Handler(Looper.getMainLooper());
         greetingEngine = new GreetingEngine(this);
 
-        // Acquire wake lock so the CPU stays active during audio playback
+        // Acquire a partial wake lock so the CPU stays active during audio playback.
+        // Guard against null in case PowerManager is unavailable (emulators).
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CallGuard:ScreeningWakeLock");
+        if (pm != null) {
+            wakeLock = pm.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "CallGuard:ScreeningWakeLock"
+            );
+        } else {
+            Log.w(TAG, "PowerManager unavailable — wake lock not acquired.");
+        }
     }
 
     @Override
@@ -78,25 +86,20 @@ public class ScreeningForegroundService extends Service {
         String action = intent.getAction();
         Log.d(TAG, "onStartCommand — action: " + action);
 
-        switch (action != null ? action : "") {
-            case ACTION_START_SCREENING:
-                currentCallerNumber = intent.getStringExtra(EXTRA_CALLER_NUMBER);
-                startScreening(currentCallerNumber);
-                break;
+        if (ACTION_START_SCREENING.equals(action)) {
+            currentCallerNumber = intent.getStringExtra(EXTRA_CALLER_NUMBER);
+            startScreening(currentCallerNumber);
 
-            case ACTION_STOP_SCREENING:
-                stopScreening("external stop command");
-                break;
+        } else if (ACTION_STOP_SCREENING.equals(action)) {
+            stopScreening("external stop command");
 
-            case ACTION_USER_TAKE_CALL:
-                // User tapped "Take Call" in the notification — hand the call back
-                stopScreening("user took the call");
-                break;
+        } else if (ACTION_USER_TAKE_CALL.equals(action)) {
+            // User tapped "Take Call" in the notification — hand the call back
+            stopScreening("user took the call");
 
-            default:
-                Log.w(TAG, "Unknown action received: " + action);
-                stopSelf();
-                break;
+        } else {
+            Log.w(TAG, "Unknown action received: " + action);
+            stopSelf();
         }
 
         // START_NOT_STICKY: if killed by system, do not restart without an explicit intent
@@ -106,18 +109,20 @@ public class ScreeningForegroundService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        // This service is not bound by any clients
         return null;
     }
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        isDestroyed = true;
+        // Cancel timer and release TTS without calling stopSelf() again
         cancelAnswerTimer();
         if (greetingEngine != null) {
             greetingEngine.shutdown();
+            greetingEngine = null;
         }
         releaseWakeLock();
+        super.onDestroy();
         Log.d(TAG, "Service destroyed.");
     }
 
@@ -141,46 +146,66 @@ public class ScreeningForegroundService extends Service {
         isScreening = true;
         Log.i(TAG, "--- SCREENING STARTED for: " + callerNumber + " ---");
 
-        // Step 1: Promote to foreground immediately to avoid ANR
+        // Step 1: Promote to foreground immediately to avoid ANR.
+        // On Android 14+ (API 34), startForeground() MUST include the service type flags
+        // or the OS throws MissingForegroundServiceTypeException.
         Notification notification = NotificationHelper.buildScreeningNotification(this, callerNumber);
-        startForeground(NOTIFICATION_ID, notification);
-
-        // Step 2: Acquire wake lock
-        if (!wakeLock.isHeld()) {
-            wakeLock.acquire(DEFAULT_RING_DELAY_MS + 60_000L); // max hold: delay + 1 min buffer
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                            | ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            );
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
         }
 
-        // Step 3: Schedule call answer after ring delay
+        // Step 2: Acquire wake lock
+        if (wakeLock != null && !wakeLock.isHeld()) {
+            // Max hold: ring delay + 1 min buffer so we never leak the lock
+            wakeLock.acquire(DEFAULT_RING_DELAY_MS + 60_000L);
+        }
+
+        // Step 3: Schedule greeting playback after ring delay
         PreferencesManager prefs = new PreferencesManager(this);
         int delayMs = prefs.getRingDelayMs(DEFAULT_RING_DELAY_MS);
         scheduleAutoAnswer(delayMs);
     }
 
     /**
-     * Schedules the Runnable that will trigger the call answer after a delay.
-     * The delay represents the number of rings before the assistant picks up.
+     * Schedules the Runnable that will trigger TTS greeting after a delay.
      *
-     * @param delayMs Delay in milliseconds before auto-answering.
+     * @param delayMs Delay in milliseconds before playing the greeting.
      */
     private void scheduleAutoAnswer(int delayMs) {
         answerCallRunnable = () -> {
-            Log.i(TAG, "Ring delay elapsed — answering call and playing greeting.");
-            // The InCallService (Mode A) or ANSWER_PHONE_CALLS permission (Mode B)
-            // is used to answer the call at this point.
-            // The GreetingEngine handles TTS playback post-answer.
+            if (isDestroyed || !isScreening) return;
+
+            Log.i(TAG, "Ring delay elapsed — playing greeting.");
+
+            if (greetingEngine == null) {
+                stopScreening("greeting engine unavailable");
+                return;
+            }
+
             greetingEngine.playGreeting(currentCallerNumber, () -> {
-                // Greeting finished callback — post summary notification
-                Log.i(TAG, "Greeting playback complete.");
-                NotificationHelper.postCallSummaryNotification(
-                        ScreeningForegroundService.this,
-                        currentCallerNumber,
-                        "Caller greeted. Awaiting further input."
-                );
-                stopScreening("greeting complete");
+                // GreetingCallback fires on the TTS engine's internal thread.
+                // All UI/service operations must run on the main thread.
+                mainHandler.post(() -> {
+                    if (isDestroyed || !isScreening) return;
+                    Log.i(TAG, "Greeting playback complete.");
+                    NotificationHelper.postCallSummaryNotification(
+                            ScreeningForegroundService.this,
+                            currentCallerNumber,
+                            "Caller greeted. Awaiting further input."
+                    );
+                    stopScreening("greeting complete");
+                });
             });
         };
 
-        Log.d(TAG, "Auto-answer scheduled in " + (delayMs / 1000) + "s");
+        Log.d(TAG, "Greeting scheduled in " + (delayMs / 1000) + "s");
         mainHandler.postDelayed(answerCallRunnable, delayMs);
     }
 
@@ -198,7 +223,7 @@ public class ScreeningForegroundService extends Service {
     /**
      * Cleanly shuts down the screening session.
      *
-     * @param reason A human-readable string explaining why screening stopped (for logs).
+     * @param reason A human-readable string explaining why screening stopped.
      */
     private void stopScreening(String reason) {
         if (!isScreening) return;
@@ -211,8 +236,14 @@ public class ScreeningForegroundService extends Service {
         }
         releaseWakeLock();
 
-        // Remove the foreground notification and stop the service
-        stopForeground(true);
+        // API 33+ deprecates stopForeground(boolean); use the int-flag overload instead.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            //noinspection deprecation
+            stopForeground(true);
+        }
+
         stopSelf();
     }
 

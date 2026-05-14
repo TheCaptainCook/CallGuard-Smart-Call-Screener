@@ -32,8 +32,13 @@ The project follows a modular architecture to ensure scalability and maintainabi
 - [x] **Notification System**
   - `NotificationHelper` builds the foreground screening notification (with "Take Call" action) and post-call summary notifications.
   - Channels registered in `CallGuardApplication.onCreate()`.
+- [x] **Android 14 Compatibility & Hardening**
+  - Declared `foregroundServiceType` for all services (`phoneCall`, `microphone`).
+  - Implemented typed permissions for API 34+ compliance.
+  - Hardened `ScreeningForegroundService` with threading safety (Main thread marshalling) and null-safe `WakeLock` handling.
+  - Optimized `.gitignore` with a strict whitelist to keep the repository clean.
 
-> **Phase 1 implemented.** All source files are in `app/src/main/java/com/callguard/app/`.
+> **Phase 1 implemented & hardened.** The core engine is now stable on Android 14 (API 34).
 
 ---
 

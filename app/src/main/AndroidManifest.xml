@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- =====================================================
          Phase 1 Permissions: Core Call Screening
@@ -14,11 +15,22 @@
     <!-- Manage our own calls via InCallService -->
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
 
-    <!-- Audio: required for TTS greeting playback -->
+    <!-- Audio: required for TTS greeting playback and microphone foreground service -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- Foreground service for persistent screening notification -->
+    <!-- Foreground service (base) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!--
+         Android 14+ (API 34): Every foreground service type must have a matching
+         typed permission declared here. Missing either permission causes an
+         IllegalArgumentException / SecurityException at startForegroundService().
+
+         phoneCall  → FOREGROUND_SERVICE_PHONE_CALL  (for CallScreeningService / InCallService)
+         microphone → FOREGROUND_SERVICE_MICROPHONE   (for ScreeningForegroundService — TTS listen)
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- Post notifications (Android 13+) -->
@@ -64,6 +76,7 @@
             android:exported="false"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
+            tools:targetApi="27"
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@style/Theme.CallGuard.IncomingCall" />
@@ -88,10 +101,17 @@
              this service for every call when CallGuard is the
              default Caller ID & Spam app or default dialer.
              ===================================================== -->
+        <!--
+             Android 14+: InCallService is bound by the system for active calls.
+             foregroundServiceType="phoneCall" is required when targeting API 34+
+             so the system knows this service handles telephony.
+        -->
         <service
             android:name=".screening.CallScreeningService"
             android:exported="true"
-            android:permission="android.permission.BIND_INCALL_SERVICE">
+            android:permission="android.permission.BIND_INCALL_SERVICE"
+            android:foregroundServiceType="phoneCall"
+            tools:ignore="ForegroundServicePermission,Typo">
             <meta-data
                 android:name="android.telecom.IN_CALL_SERVICE_UI"
                 android:value="true" />
@@ -105,12 +125,19 @@
 
         <!-- =====================================================
              Phase 1 — Core: Screening Foreground Service
-             Runs persistently while a call is being screened
+             Runs persistently while a call is being screened.
+
+             Android 14+ requirement: foregroundServiceType must be explicitly
+             declared for EVERY foreground service. Each type listed here must
+             have a matching typed permission above:
+               • phoneCall  → FOREGROUND_SERVICE_PHONE_CALL
+               • microphone → FOREGROUND_SERVICE_MICROPHONE + RECORD_AUDIO
              ===================================================== -->
         <service
             android:name=".screening.ScreeningForegroundService"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="phoneCall|microphone"
+            tools:ignore="ForegroundServicePermission" />
 
     </application>
 

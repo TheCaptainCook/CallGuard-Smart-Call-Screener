@@ -42,26 +42,21 @@ public class CallStateReceiver extends BroadcastReceiver {
 
         Log.d(TAG, "Phone state changed: " + state + " | Number: " + (incomingNumber != null ? incomingNumber : "unknown"));
 
-        switch (state) {
-            case TelephonyManager.EXTRA_STATE_RINGING:
-                handleRinging(context, incomingNumber);
-                break;
+        if (TelephonyManager.EXTRA_STATE_RINGING.equals(state)) {
+            handleRinging(context, incomingNumber);
 
-            case TelephonyManager.EXTRA_STATE_OFFHOOK:
-                // Call was answered by the user before screening completed — stop service
-                Log.d(TAG, "Call answered by user (OFFHOOK) — cancelling screening.");
-                stopScreeningService(context);
-                break;
+        } else if (TelephonyManager.EXTRA_STATE_OFFHOOK.equals(state)) {
+            // Call was answered by the user before screening completed — stop service
+            Log.d(TAG, "Call answered by user (OFFHOOK) — cancelling screening.");
+            stopScreeningService(context);
 
-            case TelephonyManager.EXTRA_STATE_IDLE:
-                // Call ended — stop service and clean up
-                Log.d(TAG, "Phone is IDLE — call ended, stopping screening service.");
-                stopScreeningService(context);
-                break;
+        } else if (TelephonyManager.EXTRA_STATE_IDLE.equals(state)) {
+            // Call ended — stop service and clean up
+            Log.d(TAG, "Phone is IDLE — call ended, stopping screening service.");
+            stopScreeningService(context);
 
-            default:
-                Log.w(TAG, "Unknown phone state: " + state);
-                break;
+        } else {
+            Log.w(TAG, "Unknown phone state: " + state);
         }
     }
 

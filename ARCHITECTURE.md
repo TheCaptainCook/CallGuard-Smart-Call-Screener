@@ -62,10 +62,23 @@ We use **Room Database** for high-performance, structured data storage.
 | API | Purpose |
 | :--- | :--- |
 | `InCallService` | Primary hook for call control and UI integration. |
-| `NotificationListenerService` | Used for detecting incoming calls on older Android versions. |
-| `JobScheduler` / `WorkManager` | Handles background syncing of the spam database. |
-| `TextToSpeech` | Converts assistant messages to audio. |
-| `SpeechRecognizer` | Converts caller audio to text transcripts. |
+| `TelephonyManager` | Used for call state detection in legacy/standalone mode. |
+| `TextToSpeech` | Converts assistant messages to audio (handled on main thread). |
+| `PowerManager` | Manages `PARTIAL_WAKE_LOCK` for background audio playback. |
+
+---
+
+## 🔐 Security & Safety Model
+
+### Foreground Service Security (Android 14+)
+To comply with API 34+ requirements, all foreground services implement the strict typed model:
+- **`CallScreeningService`**: Declared as `phoneCall` with `FOREGROUND_SERVICE_PHONE_CALL`.
+- **`ScreeningForegroundService`**: Declared as `phoneCall|microphone` with matching typed permissions and `RECORD_AUDIO`.
+
+### Threading Model
+- **UI/Service Operations**: Always performed on the Main Thread.
+- **TTS Callbacks**: The `GreetingEngine` receives events from a background thread; these are explicitly marshalled back to the Main Thread via `mainHandler.post()` before triggering service state changes (like `stopSelf()`).
+- **WakeLock Management**: Uses auto-release timeouts to prevent battery drain in case of unexpected service termination.
 
 ---
 

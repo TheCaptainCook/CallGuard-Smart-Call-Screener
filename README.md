@@ -55,7 +55,11 @@ The project is built with a modular approach for maximum performance and reliabi
    git clone https://github.com/TheCaptainCook/CallGuard-Smart-Call-Screener.git
    ```
 2. Open the project in Android Studio.
-3. Build and run on your device.
+## 🚀 Recent Stability Improvements (May 2026)
+- **Android 14 Ready:** Full compliance with API 34 foreground service requirements (typed services & permissions).
+- **Safety Hardening:** Fixed critical threading crashes and implemented null-safe hardware management (WakeLocks, PowerManager).
+- **Gradle Optimization:** Cleaned up deprecated Gradle properties for compatibility with upcoming AGP 10.0.
+- **Clean Repository:** Implemented a strict whitelist-based `.gitignore` to prevent build artifacts and IDE noise from polluting the codebase.
 
 ---
 

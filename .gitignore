@@ -1,46 +1,60 @@
-# Built artifacts
-*.apk
-*.aar
-*.ap_
-*.aab
+# =============================================================================
+# CallGuard - Whitelist-based .gitignore
+# This file is configured to exclude everything EXCEPT essential project files.
+# =============================================================================
 
-# Files for the ART/Dalvik VM
-*.dex
+# 1. Ignore everything by default
+*
 
-# Java class files
-*.class
+# 2. Allow directories to be scanned (required for whitelist to work)
+!*/
 
-# Generated files
-bin/
-gen/
-out/
-build/
+# 3. Allow essential project files at the root
+!.gitignore
+!README.md
+!LICENSE
+!IMPLEMENTATION_PLAN.md
+!CONTRIBUTING.md
+!build.gradle
+!settings.gradle
+!gradlew
+!gradlew.bat
 
-# Gradle files
+# 4. Allow Gradle wrapper configuration (but not the jar)
+!gradle/
+!gradle/wrapper/
+!gradle/wrapper/gradle-wrapper.properties
+gradle/wrapper/gradle-wrapper.jar
+
+# 5. Allow the main application module
+!app/
+!app/src/
+!app/src/**
+!app/build.gradle
+!app/proguard-rules.pro
+
+# 6. Explicitly ignore sensitive/local/temporary files (even if in allowed paths)
+**/build/
+**/local.properties
 .gradle/
-build/
-
-# Android Studio local configuration
-local.properties
-.idea/caches
-.idea/libraries
-.idea/modules.xml
-.idea/workspace.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
+.idea/
+.vscode/
+.externalNativeBuild/
+.cxx/
+daemon/
+wrapper/
+native/
 captures/
-.externalNativeBuild
-.cxx
-cmake_install.cmake
-CMakeCache.txt
-CMakeFiles/
-
-# Log files
 *.log
-
-# Android Profiler
 *.hprof
-
-# OS generated files
+*.jks
+*.keystore
+keystore.properties
+*.bak
+*.tmp
+*.swp
+*~
 .DS_Store
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/

@@ -179,13 +179,15 @@ com.callguard.app/
 ```
 
 ### Key APIs & Permissions:
-- `InCallService` - For phone app integration
-- `NotificationListenerService` - For call detection
-- `RECORD_AUDIO` - For conversation recording
+- `InCallService` - For phone app integration (Mode A)
+- `TelephonyManager` - For call detection (Mode B)
+- `RECORD_AUDIO` - For screening (Android 14 typed requirement)
 - `READ_PHONE_STATE` - For call monitoring
-- `MANAGE_OWN_CALLS` - For call handling
 - `ANSWER_PHONE_CALLS` - For auto-answering
+- `FOREGROUND_SERVICE_PHONE_CALL` - Android 14+ typed permission
+- `FOREGROUND_SERVICE_MICROPHONE` - Android 14+ typed permission
 - `SYSTEM_ALERT_WINDOW` - For overlay UI
+- `POST_NOTIFICATIONS` - For Android 13+ support
 
 ---
 
