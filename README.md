@@ -1,8 +1,6 @@
 # CallGuard: Smart Call Screener 📱🛡️
 
-<p align="center">
-  <img src="docs/images/banner.png" alt="CallGuard Banner" width="100%">
-</p>
+![CallGuard Banner](banner.png)
 
 <p align="center">
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0%2B-green.svg" alt="Android Version"></a>
@@ -48,9 +46,7 @@
 
 ## 📱 User Interface
 
-<p align="center">
-  <img src="docs/images/mockup.png" alt="CallGuard UI Mockup" width="80%">
-</p>
+![CallGuard UI Mockup](mockup.png)
 
 ---
 
