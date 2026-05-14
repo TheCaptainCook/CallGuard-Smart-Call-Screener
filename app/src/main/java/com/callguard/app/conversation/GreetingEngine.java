@@ -223,8 +223,8 @@ public class GreetingEngine {
                 // If playGreeting() was called before TTS was ready, a callback is waiting
                 if (pendingCallback != null) {
                     Log.d(TAG, "TTS ready — playing queued greeting.");
-                    PreferencesManager prefs = new PreferencesManager(context);
-                    String greetingText = prefs.getCustomGreeting(DEFAULT_GREETING);
+                    PreferencesManager queuedPrefs = new PreferencesManager(context);
+                    String greetingText = queuedPrefs.getCustomGreeting(DEFAULT_GREETING);
                     speak(greetingText, UTTERANCE_ID_GREETING + UUID.randomUUID());
                 }
 

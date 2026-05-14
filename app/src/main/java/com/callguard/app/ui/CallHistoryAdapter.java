@@ -8,13 +8,13 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 import com.callguard.app.R;
 import com.callguard.app.data.CallLog;
 import com.callguard.app.data.CallLogWithTranscript;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
+
 
 /**
  * CallHistoryAdapter — Phase 2 RecyclerView adapter for the screening history list.
@@ -24,17 +24,15 @@ import java.util.Locale;
  */
 public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallHistoryAdapter.ViewHolder> {
 
-    private static final SimpleDateFormat DATE_FORMAT =
-            new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
-
-    private OnItemClickListener clickListener;
+    private java.text.DateFormat getDateFormat() {
+        return java.text.DateFormat.getDateTimeInstance(
+            java.text.DateFormat.MEDIUM, 
+            java.text.DateFormat.SHORT
+        );
+    }
 
     public CallHistoryAdapter() {
         super(DIFF_CALLBACK);
-    }
-
-    public void setOnItemClickListener(OnItemClickListener listener) {
-        this.clickListener = listener;
     }
 
     @NonNull
@@ -48,14 +46,14 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CallLogWithTranscript item = getItem(position);
-        holder.bind(item, clickListener);
+        holder.bind(item, getDateFormat());
     }
 
     // =========================================================================
     // ViewHolder
     // =========================================================================
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
 
         private final TextView textNumber;
         private final TextView textTime;
@@ -77,13 +75,14 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
             iconExpand = itemView.findViewById(R.id.iconExpand);
         }
 
-        void bind(CallLogWithTranscript item, OnItemClickListener listener) {
+        @android.annotation.SuppressLint("SetTextI18n")
+        void bind(CallLogWithTranscript item, java.text.DateFormat dateFormat) {
             CallLog log = item.callLog;
             textNumber.setText(
                 (log.callerNumber != null && !log.callerNumber.isEmpty())
                     ? log.callerNumber : "Unknown Number"
             );
-            textTime.setText(DATE_FORMAT.format(new Date(log.timestampMs)));
+            textTime.setText(dateFormat.format(new Date(log.timestampMs)));
             textOutcome.setText(formatOutcome(log.outcome));
 
             if (log.isSpam) {
@@ -103,10 +102,10 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
             itemView.setOnClickListener(v -> {
                 isExpanded = !isExpanded;
                 updateExpansion();
-                if (listener != null) listener.onItemClick(item);
             });
         }
         
+        @android.annotation.SuppressLint("SetTextI18n")
         private void updateExpansion() {
             if (isExpanded) {
                 layoutTranscript.setVisibility(View.VISIBLE);
@@ -119,13 +118,13 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
 
         private String formatOutcome(String outcome) {
             if (outcome == null) return "Unknown";
-            switch (outcome) {
-                case "screened":      return "Screened";
-                case "user_answered": return "Answered by user";
-                case "blocked":       return "Blocked";
-                case "missed":        return "Missed";
-                default:              return outcome;
-            }
+            return switch (outcome) {
+                case "screened" -> "Screened";
+                case "user_answered" -> "Answered by user";
+                case "blocked" -> "Blocked";
+                case "missed" -> "Missed";
+                default -> outcome;
+            };
         }
     }
 
@@ -134,7 +133,7 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
     // =========================================================================
 
     private static final DiffUtil.ItemCallback<CallLogWithTranscript> DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<CallLogWithTranscript>() {
+            new DiffUtil.ItemCallback<>() {
                 @Override
                 public boolean areItemsTheSame(@NonNull CallLogWithTranscript a, @NonNull CallLogWithTranscript b) {
                     return a.callLog.id == b.callLog.id;
@@ -149,12 +148,4 @@ public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallH
                                 (a.transcript != null && b.transcript != null && java.util.Objects.equals(a.transcript.text, b.transcript.text)));
                 }
             };
-
-    // =========================================================================
-    // Click Interface
-    // =========================================================================
-
-    public interface OnItemClickListener {
-        void onItemClick(CallLogWithTranscript item);
-    }
 }

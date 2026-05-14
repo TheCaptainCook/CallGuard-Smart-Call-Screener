@@ -1,84 +1,109 @@
 # CallGuard: Smart Call Screener 📱🛡️
 
-[![Android Version](https://img.shields.io/badge/Android-8.0%2B-green.svg)](https://developer.android.com)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Gradle-orange.svg)](https://gradle.org)
+<p align="center">
+  <img src="docs/images/banner.png" alt="CallGuard Banner" width="100%">
+</p>
 
-**CallGuard** is a powerful, privacy-first Android application designed to put you back in control of your phone. Using advanced screening technology and machine learning, CallGuard intercepts unknown callers, asks them why they are calling, and provides you with a real-time transcript before you even pick up.
+<p align="center">
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0%2B-green.svg" alt="Android Version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  <a href="https://gradle.org"><img src="https://img.shields.io/badge/Build-Gradle-orange.svg" alt="Build Status"></a>
+  <a href="IMPLEMENTED_FEATURES.md"><img src="https://img.shields.io/badge/Status-Phase_4_Complete-success.svg" alt="Project Status"></a>
+</p>
+
+---
+
+## 🌟 Overview
+
+**CallGuard** is a premium, privacy-first Android application designed to put you back in control of your phone. Using advanced on-device AI and real-time transcription, CallGuard intercepts unknown callers, identifies their intent, and provides you with a live conversation log before you even pick up the phone.
+
+> **Stop spammers in their tracks. Never miss an important call again.**
 
 ---
 
 ## ✨ Key Features
 
-> **Tracking Progress:** To see exactly which features are currently built, tested, and running in the app, please see the [**Implemented Features Tracker**](IMPLEMENTED_FEATURES.md).
+### 🎙️ AI-Powered Conversation
+- **Automated Assistant:** Screens unknown callers using a natural-sounding Text-to-Speech engine.
+- **Real-Time Transcription:** High-accuracy Speech-to-Text conversion displayed live as the caller speaks.
+- **Intent Recognition:** Automatically categorizes calls as "Delivery", "Business", "Spam", or "Urgent" using NLP.
+- **Dynamic Greetings:** Context-aware greetings that change based on the time of day and caller intent.
 
-### 🎙️ AI Call Screening
-- **Automated Assistant:** Automatically answers calls from unknown numbers after a custom ring duration.
-- **Real-Time Transcription:** Watch the conversation happen in real-time with high-accuracy speech-to-text.
-- **Interactive Responses:** Use pre-set or AI-generated responses to ask for more info or tell the caller to wait.
+### 🛡️ Multi-Layered Protection
+- **STIR/SHAKEN Integration:** Carrier-level identity verification to prevent number spoofing.
+- **Hybrid Spam Engine:** Combines local pattern recognition (ML) with customizable heuristic rules.
+- **Contact Whitelisting:** Your friends and family bypass screening automatically for a seamless experience.
 
-### 🛡️ Advanced Spam Protection
-- **STIR/SHAKEN Integration:** Verifies caller identity at the carrier level to prevent caller ID spoofing.
-- **ML Detection Engine:** Analyzes call patterns, frequency, and origin to identify potential spam with high confidence.
-- **Community-Powered:** Access a global database of reported spam numbers and contribute your own reports.
+### 📊 Beautifully Organized
+- **Bottom Navigation:** A modern 3-tab layout separating your History, Analytics, and Settings.
+- **Visual Analytics:** Interactive Pie Charts visualizing your "Spam Accuracy" and "Time Saved" metrics.
+- **Expandable Transcripts:** Dive deep into conversation logs with a single tap.
 
-### 📊 Smart Dashboard
-- **Comprehensive Logs:** Review transcripts and recordings of every screened call.
-- **Analytics:** Visualize your "Time Saved" and "Spam Blocked" statistics.
-- **Material You Design:** A beautiful, dynamic interface that adapts to your system theme.
-
-### 🔒 Privacy First
-- **Local Processing:** Transcripts are processed locally on your device by default.
-- **Encrypted Data:** All logs and recordings are stored with industry-standard encryption.
-- **No Third-Party Tracking:** We value your privacy; no external analytics SDKs are included.
+### 🔒 Privacy by Design
+- **Local-Only Processing:** Keep your sensitive voice data on your device with an offline-first STT mode.
+- **Biometric Dashboard:** Secure your call history behind fingerprint or face authentication.
+- **Zero Third-Party SDKs:** We don't sell your data. No external analytics, no tracking.
 
 ---
 
-## 🏗️ Architecture
+## 📱 User Interface
 
-The project is built with a modular approach for maximum performance and reliability:
+<p align="center">
+  <img src="docs/images/mockup.png" alt="CallGuard UI Mockup" width="80%">
+</p>
 
-- **`InCallService` Integration:** Seamlessly hooks into the Android default dialer framework.
-- **Room Persistence:** Fast and secure local storage for your call history.
-- **TTS/STT Engine:** Leverages the latest Android APIs for natural voice synthesis and recognition.
+---
+
+## 📅 Project Roadmap
+
+| Phase | Milestone | Status | Key Features |
+| :--- | :--- | :--- | :--- |
+| **P1** | **Core Engine** | ✅ | Call Interception, TTS Greeting, API 34 Hardening |
+| **P2** | **Intelligence** | ✅ | Real-time STT, Room DB Persistence, Basic Spam Rules |
+| **P3** | **Security** | ✅ | STIR/SHAKEN, Biometric Lock, Local-Only Mode |
+| **P4** | **AI & Analytics** | ✅ | NLP Intent Classifier, Rich Charts, Fragment Refactor |
+| **P5** | **Community** | 🚧 | Global Spam List Sync, Contextual Geofencing |
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Android Studio Ladybug or newer.
-- Android SDK 34 (Android 14).
-- A physical device or emulator running Android 8.0+.
+*   Android Studio **Ladybug** or newer
+*   Android SDK **34** (Android 14)
+*   A physical device or emulator running **Android 8.0+**
 
 ### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/TheCaptainCook/CallGuard-Smart-Call-Screener.git
-   ```
-2. Open the project in Android Studio.
-## 🚀 Recent Stability Improvements (May 2026)
-- **Android 14 Ready:** Full compliance with API 34 foreground service requirements (typed services & permissions).
-- **Safety Hardening:** Fixed critical threading crashes and implemented null-safe hardware management (WakeLocks, PowerManager).
-- **Gradle Optimization:** Cleaned up deprecated Gradle properties for compatibility with upcoming AGP 10.0.
-- **Clean Repository:** Implemented a strict whitelist-based `.gitignore` to prevent build artifacts and IDE noise from polluting the codebase.
+1.  **Clone the Repo:**
+    ```bash
+    git clone https://github.com/TheCaptainCook/CallGuard-Smart-Call-Screener.git
+    ```
+2.  **Open in Android Studio:** Select the root directory and wait for Gradle sync.
+3.  **Run & Grant Permissions:** Ensure you grant `RECORD_AUDIO` and `READ_CONTACTS` for the best experience.
 
 ---
 
-## 🛠️ Configuration
+## 🛠️ Advanced Configuration
 
-CallGuard offers two integration modes:
-- **Mode A (System Integrated):** Set CallGuard as your default Caller ID & Spam app for the best experience.
-- **Mode B (Standalone):** Use the custom overlay UI if you prefer to keep your existing dialer.
+CallGuard is designed to be flexible. In the **Settings** tab, you can:
+*   **Change TTS Voices:** Select from a variety of languages and regional accents.
+*   **Adjust Sensitivity:** Customize the ring delay before the assistant answers.
+*   **Harden Security:** Enable the Biometric Lock and Local-Only STT flags.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+We love community involvement! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<p align="center">
+  Made with ❤️ by the CallGuard Team
+</p>

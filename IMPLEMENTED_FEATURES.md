@@ -23,8 +23,8 @@ The foundation of the call screening system.
 
 ---
 
-## ✅ Smart Features & Dashboard (Phase 2)
-Real-time transcription, local persistence, and spam detection.
+## ✅ Smart Features & Persistence (Phase 2)
+Real-time transcription, local persistence, and rule-based detection.
 
 - [x] **Real-Time Speech-to-Text (STT)**
   - `SpeechToTextManager` wraps Android's native `SpeechRecognizer`.
@@ -32,9 +32,7 @@ Real-time transcription, local persistence, and spam detection.
   - Handles network/timeout errors gracefully.
 - [x] **Rule-Based Spam Detection**
   - `SpamDetector` engine applies zero-latency heuristic rules.
-  - Flags hidden numbers (+0.8 score).
-  - Flags known spam prefixes (+0.6 score).
-  - Flags suspicious short numbers (+0.4 score).
+  - Flags hidden numbers, known spam prefixes, and suspicious short numbers.
 - [x] **Contact Whitelisting**
   - `ContactsHelper` performs synchronous lookups using `ContactsContract`.
   - Known contacts bypass the screening engine and ring normally.
@@ -42,40 +40,51 @@ Real-time transcription, local persistence, and spam detection.
   - `CallLog` entity stores metadata, duration, spam scores, and outcomes.
   - `Transcript` entity stores the STT results linked to the call.
   - `CallLogDao` handles all CRUD operations via `LiveData` for reactive UI.
-- [x] **Dashboard UI**
-  - `DashboardViewModel` dispatches aggregate statistics (Total Calls, Spam Blocked, Time Saved).
-  - `CallHistoryAdapter` renders a dynamic list of recent calls using `ListAdapter` and `DiffUtil`.
-  - Beautiful Material You item cards showing caller avatar, outcome, timestamp, and optional "SPAM" badge.
 
 ---
 
-## 🔒 Android 14+ Hardening & Safety
-- [x] `FOREGROUND_SERVICE_PHONE_CALL` and `FOREGROUND_SERVICE_MICROPHONE` service types declared and enforced.
-- [x] Explicit runtime permission requests (`RECORD_AUDIO`, `READ_CONTACTS`, etc.).
-- [x] `PowerManager.WakeLock` integration to prevent CPU sleep during background audio processing.
-
----
-
-## 🛡️ Advanced Integration & Security (Phase 3)
+## ✅ Advanced Integration & Security (Phase 3)
 Deep system integration, identity verification, and privacy controls.
 
 - [x] **STIR/SHAKEN Attestation**
   - `StirShakenVerifier` derives A/B/C/UNVERIFIED caller trust levels.
-  - Uses E.164 format validation, call frequency analysis, and spam prefix cross-check.
-  - Result stored in `CallLog.attestationLevel` for display and future filtering.
+  - Uses E.164 format validation and call frequency analysis.
 - [x] **ML-Based Spam Analysis**
-  - `MlSpamAnalyser` runs 4 pattern-recognition features entirely on-device.
-  - Features: 24h call frequency, odd-hour detection, robocaller interval regularity, repeat-after-block.
-  - Score combined with rule-based result for a unified `isSpam` flag per call.
+  - `MlSpamAnalyser` runs pattern-recognition features entirely on-device.
+  - Detects robocaller regularity and repeat-after-block patterns.
 - [x] **Biometric Dashboard Lock**
   - `BiometricLockManager` wraps AndroidX `BiometricPrompt` for fingerprint/face/PIN auth.
   - Dashboard history locks on every `onResume()` when enabled.
-  - Falls back gracefully if no biometrics are enrolled on the device.
 - [x] **Local-Only Processing Mode**
   - `PrivacyManager` exposes a toggle for local-only STT (`EXTRA_PREFER_OFFLINE`).
-  - When enabled, the `SpeechRecognizer` avoids sending audio to cloud servers.
-  - Community sync (Phase 4) is automatically suspended in local-only mode.
+  - Automatically suspends community features for maximum privacy.
 
 ---
 
-*Note: Community spam sync, AI-powered responses, and analytics charts are planned for Phase 4.*
+## ✅ AI Conversation & Rich Analytics (Phase 4)
+NLP-driven responses, visual analytics, and modern architecture.
+
+- [x] **AI-Powered Response System**
+  - `IntentClassifier` categorizes caller intent (Delivery, Appointment, Spam, etc.) from transcripts.
+  - `GreetingEngine` generates dynamic responses based on intent and time of day.
+  - Multi-language support (English, Spanish, French, etc.) via `PreferencesManager`.
+- [x] **Rich Visual Analytics**
+  - `AnalyticsFragment` integrates **MPAndroidChart** for data visualization.
+  - Real-time Pie Chart showing "Spam Detection Accuracy".
+- [x] **Modern UI Refactor**
+  - **Fragment-Based Architecture:** `MainActivity` split into `HistoryFragment`, `AnalyticsFragment`, and `SettingsFragment`.
+  - **Bottom Navigation:** Smooth transitions between core screens via `BottomNavigationView`.
+  - **Full Configuration:** Settings UI for TTS Voice, Biometric Lock, and Local-Only mode.
+- [x] **Enhanced Screening History**
+  - Expandable transcript view in `CallHistoryAdapter` using `ViewBinding`.
+
+---
+
+## 🔒 Android Hardening & Safety
+- [x] **API 34 Compliance:** Foreground service types declared and enforced.
+- [x] **Permission Management:** Explicit runtime requests and warning cards.
+- [x] **Hardware Safety:** `WakeLock` integration for background stability.
+
+---
+
+*Note: Community spam database and contextual geofencing are planned for Phase 5.*
