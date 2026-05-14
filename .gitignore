@@ -1,59 +1,84 @@
 # =============================================================================
-# CallGuard - Whitelist-based .gitignore
-# This file is configured to exclude everything EXCEPT essential project files.
+# CallGuard — Whitelist .gitignore
+# Ignore EVERYTHING, then explicitly allow only project source files.
 # =============================================================================
 
-# 1. Ignore everything by default
+# ── Step 1: Ignore everything ──
 *
 
-# 2. Allow directories to be scanned (required for whitelist to work)
+# ── Step 2: Allow directory traversal (required for whitelist) ──
 !*/
 
-# 3. Allow essential project files at the root
+# ── Step 3: Root project files ──
 !.gitignore
-!README.md
-!LICENSE
-!IMPLEMENTATION_PLAN.md
-!CONTRIBUTING.md
 !build.gradle
 !settings.gradle
+!gradle.properties
 !gradlew
 !gradlew.bat
+!README.md
+!LICENSE
+!CONTRIBUTING.md
 
-# 4. Allow Gradle wrapper configuration (but not the jar)
+# ── Step 4: Gradle wrapper (properties only, not the jar binary) ──
 !gradle/
 !gradle/wrapper/
 !gradle/wrapper/gradle-wrapper.properties
 gradle/wrapper/gradle-wrapper.jar
 
-# 5. Allow the main application module
+# ── Step 5: App module source & build config ──
 !app/
-!app/src/
-!app/src/**
 !app/build.gradle
 !app/proguard-rules.pro
+!app/src/
+!app/src/**
 
-# 6. Explicitly ignore sensitive/local/temporary files (even if in allowed paths)
+# ── Step 6: Force-exclude everything that is NOT project source ──
+# Build outputs
 **/build/
-**/local.properties
+**/out/
+**/bin/
+**/gen/
+
+# Gradle caches & daemon
 .gradle/
-.idea/
-.vscode/
-.externalNativeBuild/
-.cxx/
 daemon/
 wrapper/
+caches/
+kotlin-profile/
+
+# IDE / editor config
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Android SDK / NDK local files
+**/local.properties
+.externalNativeBuild/
+.cxx/
 native/
-captures/
-*.log
-*.hprof
-*.jks
-*.keystore
-keystore.properties
+android/
+
+# Temp files
+.tmp/
 *.bak
 *.tmp
 *.swp
 *~
+
+# Profiling & logs
+captures/
+*.log
+*.hprof
+
+# Signing secrets
+*.jks
+*.keystore
+keystore.properties
+
+# OS noise
 .DS_Store
 Thumbs.db
 Desktop.ini
