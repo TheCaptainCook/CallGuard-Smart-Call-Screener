@@ -10,8 +10,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.data.PieDataSet;
+import com.github.mikephil.charting.data.PieEntry;
+import android.graphics.Color;
+
 import com.callguard.app.R;
 import com.callguard.app.databinding.ActivityMainBinding;
+
+import java.util.ArrayList;
 import com.callguard.app.utils.BiometricLockManager;
 import com.callguard.app.utils.PermissionManager;
 import com.callguard.app.utils.PreferencesManager;
@@ -166,10 +173,12 @@ public class MainActivity extends AppCompatActivity {
         // --- Stats cards ---
         viewModel.totalCalls.observe(this, count -> {
             binding.textStatTotalValue.setText(String.valueOf(count != null ? count : 0));
+            updateChart();
         });
 
         viewModel.spamCalls.observe(this, count -> {
             binding.textStatSpamValue.setText(String.valueOf(count != null ? count : 0));
+            updateChart();
         });
 
         viewModel.totalScreeningSeconds.observe(this, seconds -> {
@@ -192,6 +201,33 @@ public class MainActivity extends AppCompatActivity {
                 binding.recyclerHistory.setVisibility(View.GONE);
             }
         });
+    }
+
+    private void updateChart() {
+        Integer total = viewModel.totalCalls.getValue();
+        Integer spam = viewModel.spamCalls.getValue();
+        
+        int t = total != null ? total : 0;
+        int s = spam != null ? spam : 0;
+        int safe = t - s;
+
+        if (t == 0) return;
+
+        ArrayList<PieEntry> entries = new ArrayList<>();
+        entries.add(new PieEntry(safe, "Safe Calls"));
+        entries.add(new PieEntry(s, "Spam Blocked"));
+
+        PieDataSet dataSet = new PieDataSet(entries, "");
+        dataSet.setColors(Color.parseColor("#00D4AA"), Color.parseColor("#FF6B6B"));
+        dataSet.setValueTextColor(Color.WHITE);
+        dataSet.setValueTextSize(12f);
+
+        PieData data = new PieData(dataSet);
+        binding.chartAnalytics.setData(data);
+        binding.chartAnalytics.getDescription().setEnabled(false);
+        binding.chartAnalytics.getLegend().setTextColor(Color.WHITE);
+        binding.chartAnalytics.setHoleColor(Color.TRANSPARENT);
+        binding.chartAnalytics.invalidate(); // refresh
     }
 
     // =========================================================================

@@ -14,6 +14,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 
 import com.callguard.app.conversation.GreetingEngine;
+import com.callguard.app.conversation.IntentClassifier;
 import com.callguard.app.conversation.SpeechToTextManager;
 import com.callguard.app.data.CallGuardDatabase;
 import com.callguard.app.data.CallLog;
@@ -306,12 +307,22 @@ public class ScreeningForegroundService extends Service {
                             "Caller greeted. Listening for response..."
                     );
 
-                    // Auto-stop screening after 30s of listening (caller has had their turn)
+                    // Auto-stop screening after 15s of listening (caller has had their turn)
                     mainHandler.postDelayed(() -> {
                         if (isScreening) {
-                            stopScreening("listening timeout");
+                            if (sttManager != null) sttManager.stopListening();
+                            String finalTranscript = sttManager != null ? sttManager.getTranscript() : "";
+                            IntentClassifier.IntentType intent = IntentClassifier.classifyIntent(finalTranscript);
+                            Log.i(TAG, "Caller intent classified as: " + intent);
+                            
+                            greetingEngine.playDynamicResponse(intent);
+                            
+                            // Allow 8s for dynamic response playback before ending
+                            mainHandler.postDelayed(() -> {
+                                if (isScreening) stopScreening("completed NLP screening");
+                            }, 8000);
                         }
-                    }, 30_000);
+                    }, 15_000);
                 });
             });
         };

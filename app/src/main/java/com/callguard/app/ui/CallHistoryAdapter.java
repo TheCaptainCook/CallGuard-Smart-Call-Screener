@@ -8,10 +8,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.callguard.app.R;
 import com.callguard.app.data.CallLog;
+import com.callguard.app.data.CallLogWithTranscript;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -23,7 +22,7 @@ import java.util.Locale;
  * Uses {@link ListAdapter} with {@link DiffUtil} for efficient, animated updates
  * when the Room LiveData emits a new list.
  */
-public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.ViewHolder> {
+public class CallHistoryAdapter extends ListAdapter<CallLogWithTranscript, CallHistoryAdapter.ViewHolder> {
 
     private static final SimpleDateFormat DATE_FORMAT =
             new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
@@ -48,8 +47,8 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        CallLog log = getItem(position);
-        holder.bind(log, clickListener);
+        CallLogWithTranscript item = getItem(position);
+        holder.bind(item, clickListener);
     }
 
     // =========================================================================
@@ -62,6 +61,10 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
         private final TextView textTime;
         private final TextView textOutcome;
         private final TextView textSpamBadge;
+        private final View layoutTranscript;
+        private final TextView textTranscript;
+        private final TextView iconExpand;
+        private boolean isExpanded = false;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -69,9 +72,13 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
             textTime     = itemView.findViewById(R.id.textCallTime);
             textOutcome  = itemView.findViewById(R.id.textOutcome);
             textSpamBadge = itemView.findViewById(R.id.textSpamBadge);
+            layoutTranscript = itemView.findViewById(R.id.layoutTranscript);
+            textTranscript = itemView.findViewById(R.id.textTranscript);
+            iconExpand = itemView.findViewById(R.id.iconExpand);
         }
 
-        void bind(CallLog log, OnItemClickListener listener) {
+        void bind(CallLogWithTranscript item, OnItemClickListener listener) {
+            CallLog log = item.callLog;
             textNumber.setText(
                 (log.callerNumber != null && !log.callerNumber.isEmpty())
                     ? log.callerNumber : "Unknown Number"
@@ -84,10 +91,30 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
             } else {
                 textSpamBadge.setVisibility(View.GONE);
             }
+            
+            if (item.transcript != null && item.transcript.text != null && !item.transcript.text.isEmpty()) {
+                textTranscript.setText(item.transcript.text);
+            } else {
+                textTranscript.setText("No transcript available.");
+            }
+            
+            updateExpansion();
 
             itemView.setOnClickListener(v -> {
-                if (listener != null) listener.onItemClick(log);
+                isExpanded = !isExpanded;
+                updateExpansion();
+                if (listener != null) listener.onItemClick(item);
             });
+        }
+        
+        private void updateExpansion() {
+            if (isExpanded) {
+                layoutTranscript.setVisibility(View.VISIBLE);
+                iconExpand.setText("▲");
+            } else {
+                layoutTranscript.setVisibility(View.GONE);
+                iconExpand.setText("▼");
+            }
         }
 
         private String formatOutcome(String outcome) {
@@ -106,18 +133,20 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
     // DiffUtil
     // =========================================================================
 
-    private static final DiffUtil.ItemCallback<CallLog> DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<CallLog>() {
+    private static final DiffUtil.ItemCallback<CallLogWithTranscript> DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<CallLogWithTranscript>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull CallLog a, @NonNull CallLog b) {
-                    return a.id == b.id;
+                public boolean areItemsTheSame(@NonNull CallLogWithTranscript a, @NonNull CallLogWithTranscript b) {
+                    return a.callLog.id == b.callLog.id;
                 }
 
                 @Override
-                public boolean areContentsTheSame(@NonNull CallLog a, @NonNull CallLog b) {
-                    return a.outcome.equals(b.outcome)
-                            && a.isSpam == b.isSpam
-                            && a.spamScore == b.spamScore;
+                public boolean areContentsTheSame(@NonNull CallLogWithTranscript a, @NonNull CallLogWithTranscript b) {
+                    return java.util.Objects.equals(a.callLog.outcome, b.callLog.outcome)
+                            && a.callLog.isSpam == b.callLog.isSpam
+                            && a.callLog.spamScore == b.callLog.spamScore
+                            && ((a.transcript == null && b.transcript == null) || 
+                                (a.transcript != null && b.transcript != null && java.util.Objects.equals(a.transcript.text, b.transcript.text)));
                 }
             };
 
@@ -126,6 +155,6 @@ public class CallHistoryAdapter extends ListAdapter<CallLog, CallHistoryAdapter.
     // =========================================================================
 
     public interface OnItemClickListener {
-        void onItemClick(CallLog callLog);
+        void onItemClick(CallLogWithTranscript item);
     }
 }

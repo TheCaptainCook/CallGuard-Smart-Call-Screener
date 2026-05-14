@@ -32,6 +32,10 @@ public interface CallLogDao {
     @Query("SELECT * FROM call_logs ORDER BY timestampMs DESC LIMIT :limit")
     LiveData<List<CallLog>> getRecentCallLogs(int limit);
 
+    @androidx.room.Transaction
+    @Query("SELECT * FROM call_logs ORDER BY timestampMs DESC LIMIT :limit")
+    LiveData<List<CallLogWithTranscript>> getRecentCallLogsWithTranscripts(int limit);
+
     /** Synchronous variant for background-thread use (ML + STIR/SHAKEN). */
     @Query("SELECT * FROM call_logs ORDER BY timestampMs DESC LIMIT :limit")
     List<CallLog> getRecentHistorySync(int limit);

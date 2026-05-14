@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData;
 import com.callguard.app.data.CallGuardDatabase;
 import com.callguard.app.data.CallLog;
 import com.callguard.app.data.CallLogDao;
+import com.callguard.app.data.CallLogWithTranscript;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -25,7 +26,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final CallLogDao dao;
     private final ExecutorService executor;
 
-    public final LiveData<List<CallLog>> recentCalls;
+    public final LiveData<List<CallLogWithTranscript>> recentCalls;
     public final LiveData<Integer> totalCalls;
     public final LiveData<Integer> spamCalls;
     public final LiveData<Integer> totalScreeningSeconds;
@@ -35,7 +36,7 @@ public class DashboardViewModel extends AndroidViewModel {
         dao = CallGuardDatabase.getInstance(application).callLogDao();
         executor = Executors.newSingleThreadExecutor();
 
-        recentCalls          = dao.getRecentCallLogs(50);
+        recentCalls          = dao.getRecentCallLogsWithTranscripts(50);
         totalCalls           = dao.getTotalCallCount();
         spamCalls            = dao.getSpamCallCount();
         totalScreeningSeconds = dao.getTotalScreeningSeconds();

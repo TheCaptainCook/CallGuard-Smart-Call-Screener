@@ -7,6 +7,7 @@ import android.util.Log;
 
 import com.callguard.app.utils.PreferencesManager;
 
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.UUID;
@@ -82,15 +83,50 @@ public class GreetingEngine {
         this.pendingCallback = callback;
 
         PreferencesManager prefs = new PreferencesManager(context);
-        String greetingText = prefs.getCustomGreeting(DEFAULT_GREETING);
+        String savedGreeting = prefs.getCustomGreeting(DEFAULT_GREETING);
+        
+        // Add time-based variation
+        String timeGreeting = getTimeBasedGreeting();
+        String finalGreeting;
+        if (savedGreeting.equals(DEFAULT_GREETING)) {
+            finalGreeting = timeGreeting + ", this is an automated assistant. The person you're calling cannot answer right now. Please state your name and reason for calling.";
+        } else {
+            finalGreeting = savedGreeting;
+        }
 
-        Log.i(TAG, "Playing greeting: \"" + greetingText + "\"");
+        Log.i(TAG, "Playing greeting: \"" + finalGreeting + "\"");
 
         if (isTtsReady) {
-            speak(greetingText, UTTERANCE_ID_GREETING + UUID.randomUUID());
+            speak(finalGreeting, UTTERANCE_ID_GREETING + UUID.randomUUID());
         } else {
             // TTS engine is still warming up — it will play when ready via the init callback
             Log.w(TAG, "TTS not yet ready. Greeting is queued and will play on init completion.");
+        }
+    }
+
+    /**
+     * Helper for time-based greeting variation.
+     */
+    private String getTimeBasedGreeting() {
+        Calendar c = Calendar.getInstance();
+        int timeOfDay = c.get(Calendar.HOUR_OF_DAY);
+
+        if (timeOfDay >= 0 && timeOfDay < 12) {
+            return "Good morning";
+        } else if (timeOfDay >= 12 && timeOfDay < 17) {
+            return "Good afternoon";
+        } else {
+            return "Good evening";
+        }
+    }
+
+    /**
+     * Plays a dynamic response based on categorized intent.
+     */
+    public void playDynamicResponse(IntentClassifier.IntentType intent) {
+        if (isTtsReady) {
+            String response = IntentClassifier.generateResponse(intent);
+            speak(response, "dynamic_" + UUID.randomUUID());
         }
     }
 
@@ -140,11 +176,13 @@ public class GreetingEngine {
     private void initTts() {
         tts = new TextToSpeech(context, status -> {
             if (status == TextToSpeech.SUCCESS) {
-                // Default to the device locale; falls back to US English
-                int langResult = tts.setLanguage(Locale.getDefault());
+                PreferencesManager prefs = new PreferencesManager(context);
+                Locale locale = Locale.forLanguageTag(prefs.getLanguage());
+                
+                int langResult = tts.setLanguage(locale);
                 if (langResult == TextToSpeech.LANG_MISSING_DATA
                         || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Log.w(TAG, "Device locale not supported — falling back to en-US.");
+                    Log.w(TAG, "Configured locale not supported — falling back to en-US.");
                     tts.setLanguage(Locale.US);
                 }
 

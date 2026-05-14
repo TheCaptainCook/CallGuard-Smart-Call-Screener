@@ -22,6 +22,7 @@ public class PreferencesManager {
     private static final String KEY_SCREENING_ENABLED = "screening_enabled";
     private static final String KEY_RING_DELAY_MS     = "ring_delay_ms";
     private static final String KEY_CUSTOM_GREETING   = "custom_greeting";
+    private static final String KEY_LANGUAGE          = "language_preference";
 
     // --- Defaults ---
     public static final boolean DEFAULT_SCREENING_ENABLED = true;
@@ -102,6 +103,28 @@ public class PreferencesManager {
         if (greeting != null && !greeting.trim().isEmpty()) {
             prefs.edit().putString(KEY_CUSTOM_GREETING, greeting.trim()).apply();
         }
+    }
+
+    // =========================================================================
+    // Language
+    // =========================================================================
+
+    /**
+     * Returns the selected language code for the TTS engine.
+     *
+     * @return BCP-47 language tag, defaulting to "en-US".
+     */
+    public String getLanguage() {
+        return prefs.getString(KEY_LANGUAGE, "en-US");
+    }
+
+    /**
+     * Sets the language for the TTS engine.
+     *
+     * @param languageCode BCP-47 language tag (e.g. "en-US", "es-ES", "fr-FR").
+     */
+    public void setLanguage(String languageCode) {
+        prefs.edit().putString(KEY_LANGUAGE, languageCode).apply();
     }
 
     /**

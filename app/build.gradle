@@ -63,4 +63,7 @@ dependencies {
 
     // Biometric — Phase 3 dashboard lock
     implementation 'androidx.biometric:biometric:1.2.0-alpha05'
+
+    // Charts — Phase 4 Analytics
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 }
