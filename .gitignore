@@ -20,6 +20,8 @@
 !LICENSE
 !CONTRIBUTING.md
 !IMPLEMENTED_FEATURES.md
+!banner.png
+!mockup.png
 
 # ── Step 4: Gradle wrapper (properties only, not the jar binary) ──
 !gradle/
